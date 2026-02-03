@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>BlackRoad Desktop</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #000;
+      color: #fff;
+      overflow: hidden;
+    }
+    .container { display: flex; height: 100vh; }
+    .sidebar {
+      width: 200px;
+      background: #111;
+      border-right: 1px solid #222;
+      padding: 20px;
+    }
+    .logo { font-size: 20px; font-weight: bold; margin-bottom: 30px; }
+    .logo span { color: #FF6B00; }
+    .nav-item {
+      padding: 12px;
+      margin-bottom: 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .nav-item:hover { background: #222; }
+    .nav-item.active { background: #FF6B00; }
+    .main-content { flex: 1; padding: 40px; overflow-y: auto; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; }
+    .title { font-size: 32px; font-weight: bold; }
+    .btn {
+      padding: 12px 24px;
+      background: #FF6B00;
+      border: none;
+      color: #fff;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn:hover { background: #FF8500; transform: translateY(-2px); }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+    .stat-card {
+      background: #111;
+      border: 1px solid #222;
+      border-radius: 12px;
+      padding: 24px;
+    }
+    .stat-value {
+      font-size: 36px;
+      font-weight: bold;
+      color: #FF6B00;
+      margin-bottom: 8px;
+    }
+    .stat-label { color: #999; font-size: 14px; }
+    .deployment-card {
+      background: #111;
+      border: 1px solid #222;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .deployment-info h3 { margin-bottom: 8px; }
+    .deployment-status {
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .status-active { background: #00FF0022; color: #0F0; }
+    .status-deploying { background: #FFA50022; color: #FFA500; }
+    .hidden { display: none; }
+    input {
+      width: 100%;
+      padding: 12px;
+      background: #111;
+      border: 1px solid #333;
+      color: #fff;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+    input:focus { outline: none; border-color: #FF6B00; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="sidebar">
+      <div class="logo">Black<span>Road</span></div>
+      <div class="nav-item active" onclick="showView('dashboard')">📊 Dashboard</div>
+      <div class="nav-item" onclick="showView('deployments')">🚀 Deployments</div>
+      <div class="nav-item" onclick="showView('analytics')">📈 Analytics</div>
+      <div class="nav-item" onclick="showView('settings')">⚙️ Settings</div>
+    </div>
+    
+    <div class="main-content">
+      <!-- Dashboard View -->
+      <div id="dashboard-view">
+        <div class="header">
+          <div class="title">Dashboard</div>
+          <button class="btn" onclick="quickDeploy()">⚡ Quick Deploy</button>
+        </div>
+        
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value" id="stat-requests">-</div>
+            <div class="stat-label">Total Requests</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-uptime">-</div>
+            <div class="stat-label">Uptime</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-latency">-</div>
+            <div class="stat-label">Avg Latency</div>
+          </div>
+        </div>
+        
+        <h2>Recent Deployments</h2>
+        <div id="recent-deployments"></div>
+      </div>
+      
+      <!-- Deployments View -->
+      <div id="deployments-view" class="hidden">
+        <div class="header">
+          <div class="title">Deployments</div>
+          <button class="btn" onclick="newDeployment()">+ New Deployment</button>
+        </div>
+        <div id="all-deployments"></div>
+      </div>
+      
+      <!-- Analytics View -->
+      <div id="analytics-view" class="hidden">
+        <div class="header">
+          <div class="title">Analytics</div>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value">📊</div>
+            <div class="stat-label">Coming Soon</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Settings View -->
+      <div id="settings-view" class="hidden">
+        <div class="header">
+          <div class="title">Settings</div>
+        </div>
+        <h3 style="margin-bottom: 16px;">API Key</h3>
+        <input type="password" id="api-key" placeholder="Enter your API key">
+        <button class="btn" onclick="saveSettings()">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const { ipcRenderer } = require('electron')
+    
+    function showView(viewName) {
+      document.querySelectorAll('.main-content > div').forEach(el => el.classList.add('hidden'))
+      document.getElementById(`${viewName}-view`).classList.remove('hidden')
+      
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'))
+      event.target.classList.add('active')
+      
+      if (viewName === 'dashboard') loadDashboard()
+    }
+    
+    async function loadDashboard() {
+      const analytics = await ipcRenderer.invoke('get-analytics', '7d')
+      if (!analytics.error) {
+        document.getElementById('stat-requests').textContent = analytics.requests?.toLocaleString() || '-'
+        document.getElementById('stat-uptime').textContent = analytics.uptime ? `${analytics.uptime}%` : '-'
+        document.getElementById('stat-latency').textContent = analytics.latency ? `${analytics.latency}ms` : '-'
+      }
+      
+      const deployments = await ipcRenderer.invoke('get-deployments')
+      if (!deployments.error && deployments.deployments) {
+        const html = deployments.deployments.slice(0, 5).map(d => `
+          <div class="deployment-card">
+            <div class="deployment-info">
+              <h3>${d.name}</h3>
+              <div style="color: #999; font-size: 14px;">${d.url || ''}</div>
+            </div>
+            <div class="deployment-status status-${d.status === 'active' ? 'active' : 'deploying'}">
+              ${d.status}
+            </div>
+          </div>
+        `).join('')
+        document.getElementById('recent-deployments').innerHTML = html
+      }
+    }
+    
+    async function quickDeploy() {
+      const result = await ipcRenderer.invoke('deploy', {
+        name: 'Quick Deploy ' + Date.now(),
+        source: 'local'
+      })
+      if (!result.error) {
+        alert('Deployed successfully!')
+        loadDashboard()
+      }
+    }
+    
+    async function saveSettings() {
+      const apiKey = document.getElementById('api-key').value
+      await ipcRenderer.invoke('login', apiKey)
+      alert('Settings saved!')
+    }
+    
+    // Load dashboard on start
+    loadDashboard()
+  </script>
+</body>
+</html>
