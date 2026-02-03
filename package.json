@@ -30,7 +30,7 @@
     "axios": "^1.6.5"
   },
   "devDependencies": {
-    "electron": "^28.1.0",
+    "electron": "^40.1.0",
     "electron-builder": "^24.9.1"
   }
 }
