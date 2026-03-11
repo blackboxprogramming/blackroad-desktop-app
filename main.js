@@ -17,14 +17,14 @@ function createWindow() {
     backgroundColor: '#000000',
     titleBarStyle: 'hiddenInset',
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false
     }
   })
 
   mainWindow.loadFile('index.html')
 
-  // Open DevTools in development
   if (process.env.NODE_ENV === 'development') {
     mainWindow.webContents.openDevTools()
   }
@@ -53,7 +53,6 @@ function createTray() {
     {
       label: 'Quick Deploy',
       click: () => {
-        // Trigger quick deploy
         if (mainWindow) {
           mainWindow.webContents.send('quick-deploy')
         }
@@ -162,6 +161,30 @@ ipcMain.handle('get-analytics', async (event, range = '7d') => {
   }
 })
 
+// Fleet health monitor — check Pi nodes
+ipcMain.handle('get-fleet-health', async () => {
+  const nodes = [
+    { name: 'alice', ip: '192.168.4.49' },
+    { name: 'cecilia', ip: '192.168.4.96' },
+    { name: 'octavia', ip: '192.168.4.100' },
+    { name: 'lucidia', ip: '192.168.4.38' },
+    { name: 'aria', ip: '192.168.4.98' },
+  ]
+  
+  const results = await Promise.allSettled(
+    nodes.map(async (node) => {
+      try {
+        const res = await axios.get(`http://${node.ip}:7890/health`, { timeout: 3000 })
+        return { ...node, alive: true, data: res.data }
+      } catch {
+        return { ...node, alive: false }
+      }
+    })
+  )
+  
+  return results.map(r => r.status === 'fulfilled' ? r.value : { ...r.reason, alive: false })
+})
+
 // App lifecycle
 app.whenReady().then(() => {
   createWindow()
@@ -201,4 +224,4 @@ setInterval(async () => {
       // Silent fail
     }
   }
-}, 60000) // Check every minute
+}, 60000)
